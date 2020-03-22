@@ -96,19 +96,20 @@ func handleLogin(w http.ResponseWriter, r *http.Request){
 
 	var result bool
 
+	//check that the password matches the username
 	uDataStruct := getUserDataByUsername(uname)
 	if uDataStruct.Password == passwd {
 		result = true
 	} else {
 		result = false
 	}
-	
-	//update login state in database
+
+	//TODO: update login state in database, we need to setup a field for this
 
 	if result {
-		w.WriteHeader(http.StatusAccepted)
+		w.WriteHeader(http.StatusAccepted) //let the user in
 	} else {
-		w.WriteHeader(http.StatusForbidden)
+		w.WriteHeader(http.StatusForbidden) //forbid the user from entering
 	}
 }
 
@@ -123,6 +124,23 @@ func handleHardwareRegister(w http.ResponseWriter, r *http.Request){
 
 func handleExistingHardwareToken(w http.ResponseWriter, r *http.Request){
 	//simply check if token is already in DB, if so return true, else return false
+	r.ParseForm()
+	uname := r.FormValue("username")
+	hwToken := r.FormValue("hwtoken")
+
+	var result bool
+	hwTokenStruct := getHardwareTokenDataByUsername(uname)
+	if hwTokenStruct.Hardwaretoken == hwToken {
+		result = true
+	} else {
+		result = false
+	}
+
+	if result {
+		w.WriteHeader(http.StatusAccepted) // token is in DB
+	} else {
+		w.WriteHeader(http.StatusForbidden) // token is not in DB.
+	}
 }
 
 func handleAuthHardware(w http.ResponseWriter, r *http.Request){
