@@ -6,14 +6,64 @@ import (
 	"net/http"
 )
 
+var db *sql.DB
+var err error
+
 //open the database connection
 func openDBConnection(){
-	db, err := sql.Open("mysql",  "USERNAME-GOES-HERE:PASSWORD-GOES-HERE@tcp(ENDPOINT:PORT-NUMBER)/DATABSE-NAME")
+	_, err := sql.Open("mysql",  "USERNAME-GOES-HERE:PASSWORD-GOES-HERE@tcp(ENDPOINT:PORT-NUMBER)/DATABSE-NAME")
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
 	}
 } //TODO: structure logic to also close connection when func is terminated
 
+//struct to store row of user data from DB
+type UserData struct {
+	Username, Password, Email, Hardwaretoken, FirstName, LastName, UserBio string
+}
+
+//struct to store hw token data from DB
+type hardwareTokenData struct {
+	Username, Hardwaretoken, Authtoken string
+}
+
+//struct to store script data from DB
+type scriptData struct {
+	Hardwaretoken, ScriptID, Script string
+}
+
+//retrieves entire row of user data based on username
+func getUserDataByUsername(usersName string) UserData {
+	openDBConnection()
+	var userDataStruct UserData
+	err = db.QueryRow("SELECT username, password, email, hardwaretoken, first_name, last_name, user_bio FROM users WHERE username = ?", usersName).Scan(&userDataStruct.Username, &userDataStruct.Password, &userDataStruct.Email, &userDataStruct.Hardwaretoken, &userDataStruct.FirstName, &userDataStruct.LastName, &userDataStruct.UserBio)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	return userDataStruct
+}
+
+//retrieves full row of hw token data based on username
+func getHardwareTokenDataByUsername(usersName string) hardwareTokenData {
+	openDBConnection()
+	var hwTDataStruct hardwareTokenData
+	err = db.QueryRow("SELECT username, hardwareToken, AuthToken FROM hardwareToken WHERE username = ?", usersName).Scan(&hwTDataStruct.Username, &hwTDataStruct.Hardwaretoken, &hwTDataStruct.Authtoken)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	return hwTDataStruct
+}
+
+//retrieves row of script data based on hardware token, should we change the prim key?
+func getScriptsByHWToken(hwToken string) scriptData {
+	openDBConnection()
+	var scriptStruct scriptData
+	err = db.QueryRow("SELECT hardwareToken, script_id, script FROM scripts WHERE hardwareToken = ?", hwToken).Scan(&scriptStruct.Hardwaretoken, &scriptStruct.ScriptID, &scriptStruct.Script)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	return scriptStruct
+}
 
 func main() {
 
