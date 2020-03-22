@@ -54,11 +54,11 @@ func getHardwareTokenDataByUsername(usersName string) hardwareTokenData {
 	return hwTDataStruct
 }
 
-//retrieves row of script data based on hardware token, should we change the prim key?
-func getScriptsByHWToken(hwToken string) scriptData {
+//retrieves row of script data based on script_id
+func getScriptsByHWToken(scriptID string) scriptData {
 	openDBConnection()
 	var scriptStruct scriptData
-	err = db.QueryRow("SELECT hardwareToken, script_id, script FROM scripts WHERE hardwareToken = ?", hwToken).Scan(&scriptStruct.Hardwaretoken, &scriptStruct.ScriptID, &scriptStruct.Script)
+	err = db.QueryRow("SELECT hardwareToken, script_id, script FROM scripts WHERE script_id = ?", scriptID).Scan(&scriptStruct.Hardwaretoken, &scriptStruct.ScriptID, &scriptStruct.Script)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
