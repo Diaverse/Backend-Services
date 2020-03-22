@@ -90,12 +90,19 @@ func main() {
 
 func handleLogin(w http.ResponseWriter, r *http.Request){
 	r.ParseForm()
-	//uname := r.FormValue("username")
-	//pass := r.FormValue("pass")
+	//get the username and password from the request/form
+	uname := r.FormValue("username")
+	passwd := r.FormValue("pass")
 
-	//verify in db
-	result := true
+	var result bool
 
+	uDataStruct := getUserDataByUsername(uname)
+	if uDataStruct.Password == passwd {
+		result = true
+	} else {
+		result = false
+	}
+	
 	//update login state in database
 
 	if result {
