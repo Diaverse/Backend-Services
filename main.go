@@ -1,6 +1,7 @@
 package main
- 
+
 import (
+  "github.com/gorilla/handlers"
 	"encoding/json"
 	"database/sql"
 	"fmt"
@@ -71,7 +72,7 @@ func getScriptsByHWToken(scriptID string) scriptData {
 func main() {
 
 	mux := http.DefaultServeMux
-	mux.Handle("/", http.FileServer(http.Dir("./Frontend/Login")))
+	mux.Handle("/", http.FileServer(http.Dir("./Frontend/Dashboard/examples")))
 	//mux.Handle("/Dashboard", http.FileServer(http.Dir("./Frontend/Dashboard/examples")))
 	mux.HandleFunc("/RegisterUser", handleRegister)
 	mux.HandleFunc("/LoginUser", handleLogin)
@@ -87,13 +88,19 @@ func main() {
 	mux.HandleFunc("/DeleteScript", handleDeleteScript)
 	mux.HandleFunc("/UploadScript", handleUploadScript)
 
+  //uses old school gorilla package to handle mux
+  headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}) //only allowed headers
+  methods := handlers.AllowedMethods([]string{"GET", "POST"}) //only allowed requests
+  origins := handlers.AllowedOrigins([]string{"*"}) //any possible domain origin
+
 	print("running\n")
 
-	fmt.Println(http.ListenAndServe(":80", mux)) //change to 8080 for localhost
+  //Cross Origin Resource Sharing passed to listen and server
+  fmt.Println(http.ListenAndServe(":80", handlers.CORS(headers, methods, origins) (mux))) //change to 8080 for localhost
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request){
-	(w).Header().Set("Access-Control-Allow-Origin", "*")
+	//(w).Header().Set("Access-Control-Allow-Origin", "*") //may not need this
 	r.ParseForm()
 	//get the username and password from the request/form
 	uname := r.FormValue("username")
@@ -114,6 +121,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request){
 	if result {
 		fmt.Print("ACCEPTED\n") //TODO: add better logging
 		w.WriteHeader(http.StatusAccepted) //let the user in
+
 	} else {
 		fmt.Print("FAILED ATTEMPTED LOGIN\n")
 		w.WriteHeader(http.StatusForbidden) //forbid the user from entering
@@ -143,33 +151,41 @@ func handleRegister(w http.ResponseWriter, r *http.Request){
 		}
 		w.WriteHeader(http.StatusOK)
 	}
-
 }
 
 func handleHardwareRegister(w http.ResponseWriter, r *http.Request){
 	// perform some kind of verification and addition to the database
-
 }
 
 func handleExistingHardwareToken(w http.ResponseWriter, r *http.Request){
+  //(w).Header().Set("Access-Control-Allow-Origin", "*") //may not need this given CORS above
+
 	//simply check if token is already in DB, if so return true, else return false
-	r.ParseForm()
+	err := r.ParseForm()
+  if err != nil {
+    fmt.Println(err.Error())
+  }
 	uname := r.FormValue("username")
 	hwToken := r.FormValue("hwtoken")
+  fmt.Println(uname);
+  fmt.Println(hwToken);
 
 	var result bool
+  fmt.Println("Made DB Req")
 	hwTokenStruct := getHardwareTokenDataByUsername(uname)
-	if hwTokenStruct.Hardwaretoken == hwToken {
+  fmt.Println(hwTokenStruct.Hardwaretoken)
+	if hwTokenStruct.Hardwaretoken == hwToken && hwToken != "" {
 		result = true
 	} else {
 		result = false
 	}
 
+  fmt.Println("Posted Results to caller")
 	if result {
 		fmt.Print("ACCEPTED\n")
 		w.WriteHeader(http.StatusAccepted) // token is in DB
 	} else {
-		fmt.Print("ACCEPTED\n")
+		fmt.Print("INVALID HARDWARE TOKEN\n")
 		w.WriteHeader(http.StatusForbidden) // token is not in DB.
 	}
 }
@@ -180,19 +196,18 @@ func handleAuthHardware(w http.ResponseWriter, r *http.Request){
 	//if yes return accepted, if false return forbidden
 }
 
-//TODO: fix issue with retrieving data form DB
+//return all the scripts in the database associated with a given hardware token
 func handleGetScripts(w http.ResponseWriter, r *http.Request){
-	//return all the scripts in the database associated with a given hardware token
 	openDBConnection()
 	r.ParseForm()
+
 	hwid := r.FormValue("hardwareToken")
 	selDB, err := db.Query("SELECT * FROM scripts WHERE hardwareToken =  ?", hwid)
 	if err != nil {
-	    fmt.Println(err.Error())
+		fmt.Println(err.Error())
 	}
 
-	//aScript := scriptData{}
-	scripts := []scriptData{}
+	scripts := make(map[int]scriptData)
 	i := 0
 	for selDB.Next(){
 		var scriptID int
@@ -200,17 +215,22 @@ func handleGetScripts(w http.ResponseWriter, r *http.Request){
 		err = selDB.Scan(&scriptID, &hwToken, &script)
 		if err != nil {
 			fmt.Println(err.Error())
+			w.WriteHeader(http.StatusBadRequest)
 		}
-		scripts[i].Hardwaretoken = hwToken
-		scripts[i].ScriptID = scriptID
-		scripts[i].Script = script
+		var tempScript scriptData
+		tempScript.Hardwaretoken = hwToken
+		tempScript.ScriptID = scriptID
+		tempScript.Script = script
+		scripts[i] = tempScript
 		i++
 	}
 
 	j, e := json.Marshal(scripts)
 	if e != nil {
 		fmt.Println(e.Error())
+		w.WriteHeader(http.StatusBadRequest)
 	}
+
 	jString := string(j)
 
 	w.Write([]byte(jString))
@@ -222,8 +242,21 @@ func handleLogout(w http.ResponseWriter, r *http.Request){
 	// if this is called, set the state to logged out
 }
 
+// based on the user's username - return all info about them from DB
 func handleGetUserInfo(w http.ResponseWriter, r *http.Request){
-	// based on the user's username - return all info about them from DB
+	openDBConnection()
+	r.ParseForm()
+	uname := r.FormValue("username")
+	userInfo := getUserDataByUsername(uname)
+
+	j, e := json.Marshal(userInfo)
+	if e != nil {
+		fmt.Println(e.Error())
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	jString := string(j)
+	w.Write([]byte(jString))
 }
 
 func handleScriptResults(w http.ResponseWriter, r *http.Request){
@@ -235,15 +268,18 @@ func handleUpdateUserInfo(w http.ResponseWriter, r *http.Request){
 	// simply update all fields in the databased based on this
 }
 
+// based on the users username delete all assocaited information from the database.
 func handleDeleteAccount(w http.ResponseWriter, r *http.Request){
-	// based on the users username delete all assocaited information from the database.
+
 }
 
+//delete a script based on the scriptID
 func handleDeleteScript(w http.ResponseWriter, r *http.Request){
-	// based on a unique value, delete the script from the database
+
 }
 
+// the script will be in the text of the response writer
+// add the script as a new entry in the database.
 func handleUploadScript(w http.ResponseWriter, r *http.Request){
-	// the script will be in the text of the response writer
-	// add the script as a new entry in the database.
+
 }
