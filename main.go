@@ -1,20 +1,29 @@
 package main
 
 import (
-  "github.com/gorilla/handlers"
+  	"github.com/gorilla/handlers"
 	"encoding/json"
 	"database/sql"
 	"fmt"
 	"net/http"
 	_ "github.com/go-sql-driver/mysql"
+	"log"
+	"net/smtp"
+	"math/rand"
+	"time"
+	"strconv"
+	"io/ioutil"
+	"strings"
 )
 
 var db *sql.DB
 var err error
+var dbCred = ""
+var emailPass = ""
 
 //open the database connection
 func openDBConnection(){
-	db, err = sql.Open("mysql", "DB CONNECTION STRING")
+	db, err = sql.Open("mysql", dbCred)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -71,12 +80,17 @@ func getScriptsByHWToken(scriptID string) scriptData {
 
 func main() {
 
+
+	dat, _ := ioutil.ReadFile("./creds.txt")
+	creds := strings.Split(string(dat), "\n")
+	dbCred = creds[0]
+	emailPass = creds[1]
+
 	mux := http.DefaultServeMux
-	mux.Handle("/", http.FileServer(http.Dir("./Frontend/Dashboard/examples")))
+	mux.Handle("/", http.FileServer(http.Dir("/home/ec2-user/Dashboard/examples")))
 	//mux.Handle("/Dashboard", http.FileServer(http.Dir("./Frontend/Dashboard/examples")))
 	mux.HandleFunc("/RegisterUser", handleRegister)
 	mux.HandleFunc("/LoginUser", handleLogin)
-	mux.HandleFunc("/RegisterHardware", handleHardwareRegister)
 	mux.HandleFunc("/CheckForExistingHardwareToken",handleExistingHardwareToken)
 	mux.HandleFunc("/AuthenticateHardware", handleAuthHardware)
 	mux.HandleFunc("/GetScriptsByHardwareToken", handleGetScripts)
@@ -106,15 +120,17 @@ func handleLogin(w http.ResponseWriter, r *http.Request){
 	uname := r.FormValue("username")
 	passwd := r.FormValue("pass")
 
-	var result bool
-
+	result := false
+	fmt.Println(uname)
+	fmt.Println(passwd)
 	//check that the password matches the username
 	uDataStruct := getUserDataByUsername(uname)
-	if uDataStruct.Password == passwd {
+	if uDataStruct.Password == passwd && uDataStruct.Password != "" {
 		result = true
 	} else {
 		result = false
 	}
+
 
 	//TODO: update login state in database, we need to setup a field for this
 
@@ -136,10 +152,16 @@ func handleRegister(w http.ResponseWriter, r *http.Request){
 	passwd := r.FormValue("pass")
 	email := r.FormValue("email")
 
-	first_name := ""
-	last_name := ""
-	user_bio := ""
+	first_name := "_"
+	last_name := "_"
+	user_bio := "_"
+
+	fmt.Print(uname + passwd + email + first_name + last_name + user_bio)
+
+	openDBConnection() //don't forget to open your connection boys and girls
 	insForm, err := db.Prepare("INSERT INTO users (username, password, email, first_name, last_name, user_bio) VALUES(?,?,?,?,?,?)")
+
+
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Print(err.Error())
@@ -149,12 +171,37 @@ func handleRegister(w http.ResponseWriter, r *http.Request){
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Print(err.Error())
 		}
+		sendToken(email)
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func handleHardwareRegister(w http.ResponseWriter, r *http.Request){
-	// perform some kind of verification and addition to the database
+func sendToken(recipient string){
+	from := "diaversemail@gmail.com" //you must allow for less secure apps on your gmail account
+    	//https://support.google.com/accounts/answer/6010255?hl=en
+    	pass := emailPass //password goes here
+
+	rand.Seed(time.Now().UnixNano())
+    	min := 0
+    	max := 10000
+    	//fmt.Println(rand.Intn(max - min + 1) + min
+	token := (rand.Intn(max - min + 1) + min)
+
+    	msg := "From: " + from + "\n" +
+            "To: " + recipient + "\n" +
+            "Subject: WELCOME TO DIAVERSE - HERE IS YOUR HARDWARE TOKEN\n\n" +
+            strconv.Itoa(token)
+
+    	err := smtp.SendMail("smtp.gmail.com:587",
+            smtp.PlainAuth("", from, pass, "smtp.gmail.com"),
+            from, []string{recipient}, []byte(msg))
+
+    	if err != nil {
+            log.Print(err)
+            return
+    	}
+
+    	log.Print("sent")
 }
 
 func handleExistingHardwareToken(w http.ResponseWriter, r *http.Request){
