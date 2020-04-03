@@ -328,5 +328,32 @@ func handleDeleteScript(w http.ResponseWriter, r *http.Request){
 // the script will be in the text of the response writer
 // add the script as a new entry in the database.
 func handleUploadScript(w http.ResponseWriter, r *http.Request){
+	r.ParseForm()
+	scriptid, _:= strconv.Atoi(r.FormValue("scriptid")) //read script id from from
+	if err != nil {
+		fmt.Println("Improperly formatted script id.")
+	}
+	fmt.Println(scriptid)
+	hardwareToken := r.FormValue("hwtoken") //read hw token from form
+	fmt.Println(hardwareToken)
+	body, err := ioutil.ReadAll(r.Body) //read body POST body and store it as byte array
+	fmt.Println(string(body)) //cast to string for debugging
+	if err != nil {
+		fmt.Println("Error reading requst body.")
+	}
 
+	openDBConnection()
+	insForm, err := db.Prepare("INSERT INTO scripts (script_id, hardwareToken, script) VALUES (?,?,?)") //setup db insert
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Print(err.Error())
+	} else {
+		_, err = insForm.Exec(scriptid, hardwareToken, string(body))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Print(err.Error())
+		}
+		w.WriteHeader(http.StatusOK) //script was successfuly sent to DB.
+	}
 }
