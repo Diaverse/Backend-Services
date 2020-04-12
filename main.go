@@ -101,6 +101,7 @@ func main() {
 	mux.HandleFunc("/DeleteAccount", handleDeleteAccount)
 	mux.HandleFunc("/DeleteScript", handleDeleteScript)
 	mux.HandleFunc("/UploadScript", handleUploadScript)
+	mux.HandleFunc("/GetHWTokenByUsername", handleGetHWToken)
 
   //uses old school gorilla package to handle mux
   headers := handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"}) //only allowed headers
@@ -171,12 +172,12 @@ func handleRegister(w http.ResponseWriter, r *http.Request){
 			w.WriteHeader(http.StatusBadRequest)
 			fmt.Print(err.Error())
 		}
-		sendToken(email)
+		sendToken(email, uname, w)
 		w.WriteHeader(http.StatusOK)
 	}
 }
 
-func sendToken(recipient string){
+func sendToken(recipient string, username string, w http.ResponseWriter){
 	from := "diaversemail@gmail.com" //you must allow for less secure apps on your gmail account
     	//https://support.google.com/accounts/answer/6010255?hl=en
     	pass := emailPass //password goes here
@@ -201,7 +202,20 @@ func sendToken(recipient string){
             return
     	}
 
-    	log.Print("sent")
+	openDBConnection() //don't forget to open your connection boys and girls
+        insForm, err := db.Prepare("INSERT INTO hardwareToken (username, hardwareToken) VALUES(?,?)")
+	if err != nil {
+                w.WriteHeader(http.StatusBadRequest)
+                fmt.Print(err.Error())
+        } else {
+                _, err = insForm.Exec(username, strconv.Itoa(token))
+                if err != nil {
+                        w.WriteHeader(http.StatusBadRequest)
+                        fmt.Print(err.Error())
+                }
+                w.WriteHeader(http.StatusOK)
+        }
+	log.Print("sent")
 }
 
 func handleExistingHardwareToken(w http.ResponseWriter, r *http.Request){
@@ -237,6 +251,7 @@ func handleExistingHardwareToken(w http.ResponseWriter, r *http.Request){
 	}
 }
 
+//depracated
 func handleAuthHardware(w http.ResponseWriter, r *http.Request){
 	//I'm imaganing we will enter a registration number into the DB manually
 	//verify that the value passed matches the value in the DB
@@ -311,8 +326,27 @@ func handleScriptResults(w http.ResponseWriter, r *http.Request){
 }
 
 func handleUpdateUserInfo(w http.ResponseWriter, r *http.Request){
-	// the writer should contain all the info pertaining ot the update
-	// simply update all fields in the databased based on this
+	r.ParseForm()
+	uname := r.FormValue("username")
+	passwd := r.FormValue("pass")
+	email := r.FormValue("email")
+	first_name := r.FormValue("first_name")
+	last_name := r.FormValue("last_name")
+	user_bio := r.FormValue("user_bio")
+
+	openDBConnection()
+	insForm, err := db.Prepare("UPDATE users SET password=?, email=?, first_name=?, last_name=?, user_bio=? WHERE username=?")
+        if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Print(err.Error())
+	} else {
+		_, err = insForm.Exec(passwd, email, first_name, last_name, user_bio, uname)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Print(err.Error())
+		}
+		w.WriteHeader(http.StatusOK)
+	}
 }
 
 // based on the users username delete all assocaited information from the database.
@@ -325,8 +359,52 @@ func handleDeleteScript(w http.ResponseWriter, r *http.Request){
 
 }
 
+func handleGetHWToken(w http.ResponseWriter, r *http.Request){
+	r.ParseForm()
+	username := r.FormValue("username")
+	hwTokenData := getHardwareTokenDataByUsername(username)
+
+        j, e := json.Marshal(hwTokenData)
+        if e != nil {
+                fmt.Println(e.Error())
+                w.WriteHeader(http.StatusBadRequest)
+        }
+
+        jString := string(j)
+        w.Write([]byte(jString))
+}
+
 // the script will be in the text of the response writer
 // add the script as a new entry in the database.
 func handleUploadScript(w http.ResponseWriter, r *http.Request){
+	r.ParseForm()
+	scriptid, _:= strconv.Atoi(r.FormValue("scriptid")) //read script id from from
+	if err != nil {
+		fmt.Println("Improperly formatted script id.")
+	}
+	fmt.Println(scriptid)
+	hardwareToken := r.FormValue("hwtoken") //read hw token from form
+	fmt.Println(hardwareToken)
+	body, err := ioutil.ReadAll(r.Body) //read body POST body and store it as byte array
+	fmt.Println(string(body)) //cast to string for debugging
+	if err != nil {
+		fmt.Println("Error reading requst body.")
+	}
 
+	openDBConnection()
+	insForm, err := db.Prepare("INSERT INTO scripts (script_id, hardwareToken, script) VALUES (?,?,?)") //setup db insert
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Print(err.Error())
+	} else {
+		_, err = insForm.Exec(scriptid, hardwareToken, string(body))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Print(err.Error())
+		}
+		w.WriteHeader(http.StatusOK) //script was successfuly sent to DB.
+	}
 }
+
+//TODO: Write an account delete button handler
