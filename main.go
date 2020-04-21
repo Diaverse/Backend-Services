@@ -406,5 +406,3 @@ func handleUploadScript(w http.ResponseWriter, r *http.Request){
 		w.WriteHeader(http.StatusOK) //script was successfuly sent to DB.
 	}
 }
-
-//TODO: Write an account delete button handler
