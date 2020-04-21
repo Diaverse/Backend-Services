@@ -1,0 +1,156 @@
+<html>
+	<head>
+		<title>Welcome to Diaverse.</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+
+<body>
+	<div class="bg">
+		<div class="form-box">
+			<div class="button-box">
+				<div id="btn"></div>
+				<button type="button" class="toggle-btn" onclick="login()">Log In</button>
+				<button type="button" class="toggle-btn" onclick="registration()">Register</button>
+			</div>
+
+			<div class="welcome">
+				<label type="text">Welcome to Diaverse.</label>
+			</div>
+			<div id="login" class="input-group">
+				<input type="text" class="input-field" placeholder="User ID" id="username" name="username" required>
+				<input type="password" class="input-field" placeholder="Password" id="pass" name="pass" required>
+				<input type="checkbox" class="check-box"><span>Remember Password</span>
+				<button type="submit" class="submit-btn" onclick = "checkLogin()">Log in</button>
+			</div>
+			<div id="registration" class="input-group">
+				<input type="text" class="input-field" placeholder="User ID" id="regUsr" name="regUsr" required>
+				<input type="email" class="input-field" placeholder="Email" id="regEmail" name="regEmail" required>
+				<input type="password" class="input-field" placeholder="Password" id="regPass" name="regPass" required>
+				<input type="checkbox" class="check-box" required><span>I agree to the Terms and Conditions</span>
+				<button type="submit" class="submit-btn" onclick = "checkReg()">Register</button>
+			</div>
+
+		</div>
+	</div>
+
+
+
+	<script>
+	var a = document.getElementById('login'); 
+	var b = document.getElementById('registration');
+	var c = document.getElementById('btn');
+
+	function registration(){
+		a.style.left = "-400px";
+		b.style.left = "50px"; 
+		c.style.left = "110px";
+	}
+
+	function login(){	
+		a.style.left = "50px";
+		b.style.left = "450px";
+		c.style.left = "0";
+	}
+
+	</script>
+
+<script type="text/javascript">
+	function checkLogin()
+	{
+
+		var userElement = document.getElementById('username');
+		var passwordElement = document.getElementById('pass');
+		var x = userElement.value;
+		var y = passwordElement.value;
+		
+		var full = "http://ec2-54-82-98-123.compute-1.amazonaws.com/LoginUser?username="+x+"&pass="+y;
+		// Practical example
+		fetch(full)
+		.then(function(response){
+			if (response.ok){
+				setCookie("username", x);
+				window.location.assign("/dashboard.html");
+			} 
+			else {	
+				alert("Invalid login credentials. Please try again.");
+			}
+		})
+			    	
+	}
+	
+	
+</script>
+
+<script type="text/javascript">
+	function checkReg()
+	{
+	
+		var userElement = document.getElementById('regUsr');
+		var passwordElement = document.getElementById('regPass');
+		var emailElement = document.getElementById('regEmail');
+		var x = userElement.value;
+		var y = passwordElement.value;
+		var z = emailElement.value;
+		
+		var full = "http://ec2-54-82-98-123.compute-1.amazonaws.com/RegisterUser?username="+x+"&pass="+y+"&email="+z;
+	
+
+	
+		fetch(full)
+		.then(function(response){
+			if (response.ok){
+				window.alert("Registration successful. Check your email for your account's hardware token.");
+				setCookie("username", x);
+				window.location.assign("/dashboard.html");
+			} 
+			else
+			{	
+				window.alert("Registration unsuccessful. Please try again.");
+			}
+		})
+			    	
+	}
+	
+
+
+
+
+	function setCookie(name,value,days) {
+    var expires = "";
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days*24*60*60*1000));
+        expires = "; expires=" + date.toUTCString();
+	}
+	
+	document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+}
+
+
+    function eraseCookie(name) {   
+    document.cookie = name+'=; Max-Age=-99999999;';  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+</script>
+
+
+</body>
+</html>
+

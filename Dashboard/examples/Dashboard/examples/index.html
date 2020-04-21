@@ -1,0 +1,170 @@
+<html>
+	<head>
+		<title>Welcome to Diaverse.</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+
+<body>
+	<div class="bg">
+		<div class="form-box">
+			<div class="button-box">
+				<div id="btn"></div>
+				<button type="button" class="toggle-btn" onclick="login()">Log In</button>
+				<button type="button" class="toggle-btn" onclick="registration()">Register</button>
+			</div>
+
+			<div class="welcome">
+				<label type="text">Welcome to Diaverse.</label>
+			</div>
+			<form id="login" class="input-group">
+				<input type="text" class="input-field" placeholder="User ID" id="username" name="username" required>
+				<input type="password" class="input-field" placeholder="Password" id="pass" name="pass" required>
+				<input type="checkbox" class="check-box"><span>Remember Password</span>
+				<button type="submit" class="submit-btn" onclick = "location.href = 'dashboard.html';">Log in</button>
+			</form>
+			<form id="registration" class="input-group">
+				<input type="text" class="input-field" placeholder="User ID" id="regUsr" name="regUsr" required>
+				<input type="email" class="input-field" placeholder="Email" id="regEmail" name="regEmail" required>
+				<input type="password" class="input-field" placeholder="Password" id="regPass" name="regPass" required>
+				<input type="checkbox" class="check-box" required><span>I agree to the Terms and Conditions</span>
+				<button type="submit" class="submit-btn" onsubmit="checkReg()">Register</button>
+			</form>
+
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		function getToken() {
+		var loginUrl = "http://ec2-54-82-98-123.compute-1.amazonaws.com/LoginUser"
+		var xhr = new XMLHttpRequest();
+		var userElement = document.getElementById('username');
+		var passwordElement = document.getElementById('pass');
+		//var tokenElement = document.getElementById('token');
+		var user = userElement.value;
+		var password = passwordElement.value;
+	  
+		xhr.open('GET', loginUrl, true);
+		xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+		console.log("Line 48")
+		xhr.addEventListener('load', function() {
+		  var responseObject = JSON.parse(this.response);
+		  console.log("Line 51")
+		  console.log(responseObject);
+		  console.log("Line 53")
+		  if (responseObject.token) {
+			tokenElement.innerHTML = responseObject.token;
+			console.log("Line 56")
+		  } else {
+			tokenElement.innerHTML = "No token received";
+			console.log("Line 59")
+		  }
+		});
+	  
+		var sendObject = JSON.stringify({name: user, password: password});
+	  
+		console.log('going to send', sendObject);
+	  
+		xhr.send(sendObject);
+		console.log("Line 68")
+	  }
+	</script>
+
+	
+
+
+
+
+
+	<script>
+	var a = document.getElementById('login'); 
+	var b = document.getElementById('registration');
+	var c = document.getElementById('btn');
+
+	function registration(){
+		a.style.left = "-400px";
+		b.style.left = "50px"; 
+		c.style.left = "110px";
+	}
+
+	function login(){	
+		a.style.left = "50px";
+		b.style.left = "450px";
+		c.style.left = "0";
+	}
+
+	</script>
+
+<script type="text/javascript">
+	function checkLogin()
+	{
+		//entering no credentials = acepted..
+		var userElement = document.getElementById('username');
+		var passwordElement = document.getElementById('pass');
+		var x = userElement.value;
+		var y = passwordElement.value;
+		
+		var full = "http://ec2-54-82-98-123.compute-1.amazonaws.com/LoginUser?username="+x+"&pass="+y;
+		// Practical example
+		fetch(full)
+		.then(function(response){
+			if (!response.ok){
+				alert("Invalid login credentials. Please try again.");
+			}
+			else
+			{
+				alert("Redirecting..");
+				window.location.replace("www.google.com");
+			}
+		})
+		.catch(function(reponse)
+		{
+			if (!response.ok){
+				alert("Invalid login credentials. Please try again.");
+			}
+			else
+			{
+				alert("Redirecting..");
+				window.location.replace("www.google.com");
+			}
+
+			sleep(1000000000)
+		})
+	    	
+	}
+	
+	
+</script>
+
+<script type="text/javascript">
+	function checkReg()
+	{
+		var x = reigstration.regUsr
+		var y = registration.regPass
+		var z = registration.regEmail
+		var full = "http://ec2-54-82-98-123.compute-1.amazonaws.com/RegisterUser?username="+x+"&pass="+y+"&email="+z
+		// Practical example
+		fetch(full)
+		.then(function(response){
+			if (!response.ok){
+				alert("An error has occurred. Please try again later.")
+			}
+		})
+
+ 		 .then(response => response.json())
+ 		 .then(data => console.log(JSON.stringify(data)))
+	    	sleep(19)
+
+			
+	}
+	
+</script>
+
+<script type="">
+function gotoDashboard()
+{
+
+}
+</script>
+
+</body>
+</html>
